@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
+import { HighchartsChartModule } from 'highcharts-angular';
 
 import {
   AvatarModule,
@@ -18,7 +19,7 @@ import { IconModule } from '@coreui/icons-angular';
 import { ChartjsModule } from '@coreui/angular-chartjs';
 
 import { AOutcomeRoutingModule } from './outcome-routing.module';
-import { AOutcomeComponent } from './outcome.component';
+import { OutcomeComponent } from './outcome.component';
 
 @NgModule({
   imports: [
@@ -37,9 +38,10 @@ import { AOutcomeComponent } from './outcome.component';
     ButtonGroupModule,
     ChartjsModule,
     AvatarModule,
-    TableModule
+    TableModule,
+    HighchartsChartModule
   ],
-  declarations: [AOutcomeComponent]
+  declarations: [OutcomeComponent]
 })
 export class AOutcomeModule {
 }

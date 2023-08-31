@@ -1,0 +1,94 @@
+<c-card class="view-border--none">
+  <h2>SARI/ILI <span class="view-margin--side--10">:</span> Influenza</h2>
+
+  <p>
+    This dashboard aims to monitor the evolution of SARI-ILI, identify more lethal strains, and track the extent of
+    undiagnosed COVID deaths. It provides critical insights to inform public health policies and enhance prevention
+    and control measures.
+  </p>
+</c-card>
+
+<br />
+
+<c-row>
+  <c-col>
+    <c-card>
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['influenzaCascade'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<br />
+
+<c-row>
+  <c-col [sm]="4">
+    <c-card class="mb-4">
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['findTypesByDistribution'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+
+  <c-col [sm]="4">
+    <c-card class="mb-4">
+      <highcharts-chart [Highcharts]="highcharts"
+        [options]="CompositeCharts['findInfluenzaASubtypesDistribution'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+
+  <c-col [sm]="4">
+    <c-card class="mb-4">
+      <highcharts-chart [Highcharts]="highcharts"
+        [options]="CompositeCharts['findInfluenzaBLineageDistribution'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<c-row>
+  <c-col [sm]="6">
+    <c-card>
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['enrolledByAgeGroup'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+
+  <c-col [sm]="6">
+    <c-card>
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['fluPositiveByAgeGroup'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<br />
+<c-row>
+  <c-col [sm]="12">
+    <c-card class="mb-4">
+      <highcharts-chart id="12313" [Highcharts]="highcharts"
+        [options]="CompositeCharts['findInfluenzaPositivityByTypeOvertime'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<br />
+<c-row>
+  <c-col [sm]="12">
+    <c-card class="mb-4">
+      <highcharts-chart [Highcharts]="highcharts"
+        [options]="CompositeCharts['findInfluenzaStrainsOvertime'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<br />
+<c-row>
+  <c-col>
+    <c-card>
+      <div id="geographicDistributionByFacility" style="height: 600px;"></div>
+    </c-card>
+  </c-col>
+</c-row>

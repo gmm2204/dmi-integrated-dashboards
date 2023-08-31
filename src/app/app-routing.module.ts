@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 import { DefaultLayoutComponent } from './containers';
+import { AboutComponent } from './views/mortality_ncov/about/about.component'
 import { Page404Component } from './views/pages/page404/page404.component';
 import { Page500Component } from './views/pages/page500/page500.component';
 import { LoginComponent } from './views/pages/login/login.component';
@@ -10,7 +11,7 @@ import { RegisterComponent } from './views/pages/register/register.component';
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'dashboard',
+    redirectTo: 'mortality_ncov/about',
     pathMatch: 'full'
   },
   {
@@ -20,6 +21,61 @@ const routes: Routes = [
       title: 'Home'
     },
     children: [
+
+      {
+        path: 'sari_ili/about',
+        loadChildren: () =>
+          import('./views/sari_ili/about/about.module').then((m) => m.AboutModule)
+      },
+      {
+        path: 'sari_ili/overview',
+        loadChildren: () =>
+          import('./views/sari_ili/overview/overview.module').then((m) => m.SIOverviewModule)
+      },
+      {
+        path: 'sari_ili/influenza',
+        loadChildren: () =>
+          import('./views/sari_ili/influenza/influenza.module').then((m) => m.InfluenzaModule)
+      },
+      {
+        path: 'sari_ili/sarscov',
+        loadChildren: () =>
+          import('./views/sari_ili/sarscov/sarscov.module').then((m) => m.SARSCOV2Module)
+      },
+      {
+        path: 'cholera/about',
+        loadChildren: () =>
+          import('./views/cholera/about/about.module').then((m) => m.AboutModule)
+      },
+      {
+        path: 'cholera/overview',
+        loadChildren: () =>
+          import('./views/cholera/overview/overview.module').then((m) => m.OverviewModule)
+      },
+      {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('./views/dashboard/dashboard.module').then((m) => m.DashboardModule)
+      },
+      {
+        path: 'pages',
+        loadChildren: () =>
+          import('./views/pages/pages.module').then((m) => m.PagesModule)
+      },
+    ]
+  },
+  {
+    path: '',
+    component: DefaultLayoutComponent,
+    data: {
+      title: 'COVID-19 Mortality'
+    },
+    children: [
+      {
+        path: 'mortality_ncov/about',
+        loadChildren: () =>
+          import('./views/mortality_ncov/about/about.module').then((m) => m.AboutModule)
+      },
       {
         path: 'mortality_ncov/overview',
         loadChildren: () =>
@@ -39,6 +95,20 @@ const routes: Routes = [
         path: 'mortality_ncov/results',
         loadChildren: () =>
           import('./views/mortality_ncov/results/results.module').then((m) => m.ResultsModule)
+      }
+    ]
+  },
+  {
+    path: '',
+    component: DefaultLayoutComponent,
+    data: {
+      title: 'AFI'
+    },
+    children: [
+      {
+        path: 'afi/about',
+        loadChildren: () =>
+          import('./views/afi/about/about.module').then((m) => m.AboutModule)
       },
       {
         path: 'afi/overview',
@@ -51,35 +121,20 @@ const routes: Routes = [
           import('./views/afi/cases/cases.module').then((m) => m.ACasesModule)
       },
       {
-        path: 'afi/results',
+        path: 'afi/rdt_results',
         loadChildren: () =>
-          import('./views/afi/results/results.module').then((m) => m.AResultsModule)
+          import('./views/afi/results_rdt/results.module').then((m) => m.AResultsModule)
+      },
+      {
+        path: 'afi/pcr_results',
+        loadChildren: () =>
+          import('./views/afi/results_pcr/results.module').then((m) => m.AResultsModule)
       },
       {
         path: 'afi/outcome',
         loadChildren: () =>
           import('./views/afi/outcome/outcome.module').then((m) => m.AOutcomeModule)
-      },
-      {
-        path: 'sari_ili/overview',
-        loadChildren: () =>
-          import('./views/sari_ili/overview/overview.module').then((m) => m.SIOverviewModule)
-      },
-      {
-        path: 'sari_ili/enrolment',
-        loadChildren: () =>
-          import('./views/sari_ili/enrolment/enrolment.module').then((m) => m.SIEnrolmentModule)
-      },
-      {
-        path: 'dashboard',
-        loadChildren: () =>
-          import('./views/dashboard/dashboard.module').then((m) => m.DashboardModule)
-      },
-      {
-        path: 'pages',
-        loadChildren: () =>
-          import('./views/pages/pages.module').then((m) => m.PagesModule)
-      },
+      }
     ]
   },
   {
@@ -124,5 +179,6 @@ const routes: Routes = [
   ],
   exports: [RouterModule]
 })
+
 export class AppRoutingModule {
 }

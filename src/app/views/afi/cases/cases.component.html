@@ -1,11 +1,38 @@
-<c-card class="mb-4">
-  <c-card-header>AFI Syndromic Cases</c-card-header>
-  <c-card-body>
-    <p>
-      This dashboard aims to monitor the evolution of SARS-CoV-2, identify more
-      lethal strains, and track the extent of undiagnosed COVID deaths. It
-      provides critical insights to inform public health policies and enhance
-      prevention and control measures.
-    </p>
-  </c-card-body>
+<c-card class="view-border--none">
+  <h2>AFI <span class="view-margin--side--10">:</span> Syndromes</h2>
+
+  <p>
+    <!-- Acute febrile illness syndromes are a group of conditions characterized by the sudden onset of fever and other
+    symptoms, such as headache, rash, joint pain, or gastrointestinal disturbances. They can be caused by various
+    infectious agents, such as bacteria, viruses, parasites, or fungi, or by non-infectious causes, such as autoimmune
+    disorders, drug reactions, or malignancies. The diagnosis and management of acute febrile illness syndromes depend
+    on the clinical presentation, epidemiological context, laboratory tests, and response to treatment. -->
+  </p>
 </c-card>
+
+<br />
+
+<c-row>
+  <c-col [sm]="6">
+    <c-card>
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['syndromes'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+
+  <c-col [sm]="6">
+    <c-card>
+      <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['syndromesByFacility'].ChartOptions"
+        style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+    </c-card>
+  </c-col>
+</c-row>
+
+<br />
+
+<c-col>
+  <c-card>
+    <highcharts-chart [Highcharts]="highcharts" [options]="CompositeCharts['syndromesOverTime'].ChartOptions"
+      style="height: 400px; display: inline-block; max-width: 100%;"></highcharts-chart>
+  </c-card>
+</c-col>

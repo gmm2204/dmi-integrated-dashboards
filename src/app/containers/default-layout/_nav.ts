@@ -2,14 +2,15 @@ import { INavData } from '@coreui/angular';
 
 export const navItems: INavData[] = [
   {
-    name: 'Intergrated Dashboards',
-    title: true
-  },
-  {
-    name: 'Mortality (COVID-19)',
+    name: 'COVID-19 Mortality',
     url: '/mortality_ncov',
-    iconComponent: { name: 'cil-chart' },
+    icon: 'fa fa-virus-covid',
+    class: 'view-drawer--link',
     children: [
+      {
+        name: 'About',
+        url: '/mortality_ncov/about'
+      },
       {
         name: 'Overview',
         url: '/mortality_ncov/overview'
@@ -31,8 +32,13 @@ export const navItems: INavData[] = [
   {
     name: 'AFI',
     url: '/afi',
-    iconComponent: { name: 'cil-chart' },
+    icon: 'fa fa-temperature-full',
+    class: 'view-drawer--link',
     children: [
+      {
+        name: 'About',
+        url: '/afi/about'
+      },
       {
         name: 'Overview',
         url: '/afi/overview'
@@ -42,8 +48,12 @@ export const navItems: INavData[] = [
         url: '/afi/cases'
       },
       {
-        name: 'Laboratory Results',
-        url: '/afi/results'
+        name: 'RDT Laboratory Results',
+        url: '/afi/rdt_results'
+      },
+      {
+        name: 'TAC PCR Laboratory Results',
+        url: '/afi/pcr_results'
       },
       {
         name: 'Diagnosis and Outcome',
@@ -54,15 +64,40 @@ export const navItems: INavData[] = [
   {
     name: 'SARI/ILI',
     url: '/sari_ili',
-    iconComponent: { name: 'cil-chart' },
+    icon: 'fa fa-lungs-virus',
+    class: 'view-drawer--link',
     children: [
+      {
+        name: 'About',
+        url: '/sari_ili/about'
+      },
       {
         name: 'Overview',
         url: '/sari_ili/overview'
       },
       {
-        name: 'Enrolment',
-        url: '/sari_ili/enrolment'
+        name: 'Influenza',
+        url: '/sari_ili/influenza'
+      },
+      {
+        name: 'SARS-COV-2',
+        url: '/sari_ili/sarscov'
+      }
+    ]
+  },
+  {
+    name: 'Cholera',
+    url: '/cholera',
+    icon: 'fa fa-bacteria',
+    class: 'view-drawer--link',
+    children: [
+      {
+        name: 'About',
+        url: '/cholera/about'
+      },
+      {
+        name: 'Overview',
+        url: '/cholera/overview'
       }
     ]
   }
