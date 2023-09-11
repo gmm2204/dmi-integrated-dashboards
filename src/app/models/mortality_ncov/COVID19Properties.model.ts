@@ -1,9 +1,16 @@
 export interface COVID19Properties {
+  Covid19PositivePercent: any;
+  Covid19NegativePercent: any;
+  SampleTestedNumber: any;
+  Covid19NegativeNumber(Covid19NegativeNumber: any): unknown;
+  Covid19PositiveNumber(Covid19PositiveNumber: any): unknown;
+  NegativeNumber: any;
+  Sex: string;
   ScreenedNumber(ScreenedNumber: any): unknown;
   EligibleNumber(EligibleNumber: any): unknown;
   TestedNumber(TestedNumber: any): unknown;
   PercentEligible: any;
-  EpiWeek: number;
+  EpiWeek: string;
   SampleTested: Number;
   CovidPositive: number;
 
@@ -42,7 +49,7 @@ export interface COVID19Properties {
   PositiveFemale: number;
 
   ElligibleNumber: number;
-  Month: number;
+  Month: string;
   Year: string;
 
   Screened: number;

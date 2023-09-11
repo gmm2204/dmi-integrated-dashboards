@@ -1,4 +1,26 @@
 export interface SARIProperties {
+    AbscondedPercent: any;
+    DeathPercent: any;
+    DischargedFromHospitalPercent: any;
+    ReferredToAnotherFacilityPercent: any;
+    RefusedHospitalTreatmentPercent: any;
+    InfluenzaPositiveNumber: any;
+    InfluenzaABPositivePercent: any;
+    ReferredToAnotherFacilityNumber: any;
+    ReferredToAnotherFacilityPercentage: any;
+    WeekNumber: any;
+    AgeGroupCategory(AgeGroupCategory: any): unknown;
+    SARSCOV2TestedPercent(SARSCOV2TestedPercent: any): unknown;
+    NotDeterminedNumber: any;
+    VictoriaPercent: any;
+    YamagataPercent: any;
+    NotdeterminedPercent: any;
+    FluPositivePercent: any;
+    EnrolledPercent: any;
+    DischargedFromHospitalNumber: any;
+    RefusedHospitalTreatmentNumber: any;
+    YEAR: string;
+    TestedNumber: any;
     SARSCOV2TestedNumber(SARSCOV2TestedNumber: any): unknown;
     SARSCOV2TestedPercentage(SARSCOV2TestedPercentage: any): unknown;
     SARSCOV2PositivePercentage: any;
@@ -15,8 +37,8 @@ export interface SARIProperties {
     Covid19PositiveNumber: number;
     Covid19PositivePercent: number;
     EPIWeek: string;
-    Month: number;
-    Year: number;
+    Month: string;
+    Year: string;
 
     Scenario: string;
     Subtype: string;

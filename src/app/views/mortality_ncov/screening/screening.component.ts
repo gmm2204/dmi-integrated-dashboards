@@ -5,14 +5,11 @@ import { ChartParent } from '../../../models/mortality_ncov/ChartParent.model';
 
 import * as Highcharts from 'highcharts';
 import HC_exporting from 'highcharts/modules/exporting';
-import HighchartsMore from 'highcharts/highcharts-more';
-import HighchartsSolidGauge from 'highcharts/modules/solid-gauge';
+
 import { APIReader } from 'src/app/models/APIReader.model';
 import { IDFilter } from 'src/app/models/IDFilter.model';
 import { IDFacility } from 'src/app/models/IDFacility.model';
-
-HighchartsMore(Highcharts);
-HighchartsSolidGauge(Highcharts);
+import { GroupedCategory } from '../../../models/GroupedCategory.model';
 
 @Component({
   templateUrl: 'screening.component.html',
@@ -40,10 +37,13 @@ export class ScreeningComponent implements OnInit {
   }
 
   loadFilters() {
-    //#region Acqurie composite facilities
+    //#region Acquire composite facilities
     this.APIReaderInstance.loadData("mortality_ncov/acquireCompositeFacilities", () => {
       this.APIReaderInstance.CompositeData.forEach((dataInstance: any) => {
-        this.CompositeFacilities.push(new IDFacility(dataInstance));
+        this.CompositeFacilities.push(new IDFacility(
+          dataInstance['facility_id'],
+          dataInstance['facility_code'],
+          dataInstance['facility_name']));
       });
     });
     //#endregion
@@ -72,10 +72,14 @@ export class ScreeningComponent implements OnInit {
       },
       () => {
         let MCTemp = this.CompositeCharts['screeningCascade'];
+
+        // Reset
+        MCTemp.ChartSeries = [];
+
         MCTemp.ChartSeries.push([]);
-        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].TotalScreened);
-        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].Eligible);
-        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].Enrolled);
+        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].ScreenedNumber);
+        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].EligibleNumber);
+        MCTemp.ChartSeries[0].push(MCTemp.ChartData[0].EnrolledNumber);
       },
       () => {
         let MCTemp = this.CompositeCharts['screeningCascade'];
@@ -116,6 +120,7 @@ export class ScreeningComponent implements OnInit {
           series: [
             {
               data: MCTemp.ChartSeries[0],
+              name: "Number",
               color: "#234FEA",
               showInLegend: false
             }
@@ -140,14 +145,17 @@ export class ScreeningComponent implements OnInit {
       () => {
         let MCTemp = this.CompositeCharts['findScreeningByFacility'];
 
+        // Reset
+        MCTemp.ChartSeries = [];
+
         //#region Init series indexes
         // Facilities (Index --> 0)
         MCTemp.ChartSeries.push([]);
 
-        //Enrolled (Index --> 1)
+        //Screened (Index --> 1)
         MCTemp.ChartSeries.push([]);
 
-        //Positive (Index --> 2)
+        //Eligible (Index --> 2)
         MCTemp.ChartSeries.push([]);
         //#endregion
 
@@ -156,11 +164,11 @@ export class ScreeningComponent implements OnInit {
           //Compile Facilities
           MCTemp.ChartSeries[0].push(dataInstance.Facility);
 
-          //Compile Enrollments
-          MCTemp.ChartSeries[1].push(dataInstance.Enrolled);
+          //Compile Screened
+          MCTemp.ChartSeries[1].push(dataInstance.ScreenedNumber);
 
-          //Compile Positives
-          MCTemp.ChartSeries[2].push(dataInstance.Covid19Positive);
+          //Compile Eligible
+          MCTemp.ChartSeries[2].push(dataInstance.EligibleNumber);
         });
         //#endregion
       },
@@ -187,14 +195,14 @@ export class ScreeningComponent implements OnInit {
           series: [
             {
               showInLegend: true,
-              name: "Enrolled",
+              name: "Screened",
               data: MCTemp.ChartSeries[1],
               type: 'column',
               color: "#234FEA",
             },
             {
               showInLegend: true,
-              name: "Positive",
+              name: "Eligible",
               data: MCTemp.ChartSeries[2],
               type: 'column',
               color: "red",
@@ -216,7 +224,7 @@ export class ScreeningComponent implements OnInit {
     );
     //#endregion
 
-    //#region Load Chart --> Screening by Overtime
+    //#region Load Chart --> Screening by over time
     this.CompositeCharts['findScreeningOvertime'] = new Chart(this.http);
     this.CompositeCharts['findScreeningOvertime'].loadData(
       "screening/findScreeningOvertime",
@@ -227,6 +235,11 @@ export class ScreeningComponent implements OnInit {
       },
       () => {
         let MCTemp = this.CompositeCharts['findScreeningOvertime'];
+        let GCPeriod: GroupedCategory[] = [];
+        let GCInstance = new GroupedCategory("", []);
+
+        // Reset
+        MCTemp.ChartSeries = [];
 
         //#region Init series indexes
         // EpiWeek (Index --> 0)
@@ -242,9 +255,16 @@ export class ScreeningComponent implements OnInit {
           MCTemp.ChartSeries[0].push(dataInstance.EpiWeek);
 
           //Compile Screenings
-          MCTemp.ChartSeries[1].push(dataInstance.Screened);
+          MCTemp.ChartSeries[1].push(dataInstance.ScreenedNumber);
+
+          let gc_year_index = GCInstance.attach(GCPeriod, dataInstance.Year, false);
+          let gc_month_index = GCInstance.attach(GCPeriod[gc_year_index].categories, dataInstance.Month, false);
+          let gc_epiweek_index = GCInstance.attach(GCPeriod[gc_year_index].categories[gc_month_index].categories, dataInstance.EpiWeek, true);
         });
         //#endregion
+      
+        //Period (Index --> 2)
+        MCTemp.ChartSeries.push(JSON.parse(JSON.stringify(GCPeriod)));
       },
       () => {
         let MCTemp = this.CompositeCharts['findScreeningOvertime'];
@@ -258,16 +278,27 @@ export class ScreeningComponent implements OnInit {
             type: "spline"
           },
           xAxis: {
-            categories: MCTemp.ChartSeries[0],
+            title: { text: "Period (Year, Month, Epi Week)" },
+            tickWidth: 1,
+            labels: {
+              y: 18,
+              groupedOptions: [{
+                y: 10,
+              }, {
+                y: 10
+              }]
+            },
+            categories: MCTemp.ChartSeries[2]
           },
           yAxis: {
             title: {
               text: "Number Screened",
-            }
+            },
+            allowDecimals: false
           },
           series: [
             {
-              name: "Epiweek",
+              name: "Number Screened",
               data: MCTemp.ChartSeries[1],
               color: "#234FEA",
               type: "spline"

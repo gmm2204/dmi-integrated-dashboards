@@ -1,16 +1,16 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, retry, throwError } from 'rxjs';
-import { COVID19Properties } from './COVID19Properties.model';
+import { AFIProperties } from './AFIProperties.model';
 
 @Injectable({
     providedIn: 'root'
 })
 
 export class Chart {
-    chart_api_endpoint: string = "http://localhost:8080/api/mortality_ncov";
+    chart_api_endpoint: string = "http://localhost:8080/api/afi";
     ChartAPIService: any;
-    ChartData: COVID19Properties[] = [];
+    ChartData: AFIProperties[] = [];
     ChartFilterData: any = {};
     ChartSeries: any[] = [];
     ChartOptions: {} = {};
@@ -45,7 +45,7 @@ export class Chart {
             });
     }
 
-    readAPI(): Observable<COVID19Properties[]> {
+    readAPI(): Observable<AFIProperties[]> {
         const requestOptions = {
             headers: new HttpHeaders(
                 {
@@ -56,7 +56,7 @@ export class Chart {
             )
         };
 
-        return this.http.post<COVID19Properties[]>(`${this.chart_api_endpoint}`, this.ChartFilterData, requestOptions).pipe(
+        return this.http.post<AFIProperties[]>(`${this.chart_api_endpoint}`, this.ChartFilterData, requestOptions).pipe(
             retry(1),
             catchError(this.handleError)
         );

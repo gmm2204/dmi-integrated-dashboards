@@ -8,15 +8,9 @@ import { Covid19Summary } from '../../../models/mortality_ncov/covid19Summary.mo
 import { IDFilter } from '../../../models/IDFilter.model';
 import { APIReader } from '../../../models/APIReader.model';
 import { IDFacility } from '../../../models/IDFacility.model';
+import { GroupedCategory } from '../../../models/GroupedCategory.model';
 
 import * as Highcharts from 'highcharts';
-import HC_exporting from 'highcharts/modules/exporting';
-import HighchartsMore from 'highcharts/highcharts-more';
-import HighchartsSolidGauge from 'highcharts/modules/solid-gauge';
-import * as moment from 'moment';
-
-HighchartsMore(Highcharts);
-HighchartsSolidGauge(Highcharts);
 
 @Component({
   templateUrl: 'overview.component.html',
@@ -25,12 +19,12 @@ HighchartsSolidGauge(Highcharts);
 
 export class OverviewComponent implements OnInit {
   //#region Prerequisites
-  highcharts = Highcharts;
-  CompositeCharts: ChartParent = {};
+  protected highcharts = Highcharts;
+  protected CompositeCharts: ChartParent = {};
 
-  APIReaderInstance = new APIReader(this.http);
-  DataFilterInstance = new IDFilter();
-  CompositeFacilities: any[] = [];
+  protected APIReaderInstance = new APIReader(this.http);
+  protected DataFilterInstance = new IDFilter();
+  protected CompositeFacilities: any[] = [];
   //#endregion
 
   //#region Prerequisites --> COVID-19 Summary
@@ -55,15 +49,17 @@ export class OverviewComponent implements OnInit {
   }
 
   loadFilters() {
-    //#region Acqurie composite facilities
+    //#region Acquire composite facilities
     this.APIReaderInstance.loadData("mortality_ncov/acquireCompositeFacilities", () => {
       this.APIReaderInstance.CompositeData.forEach((dataInstance: any) => {
-        this.CompositeFacilities.push(new IDFacility(dataInstance));
+        this.CompositeFacilities.push(new IDFacility(
+          dataInstance['facility_id'],
+          dataInstance['facility_code'],
+          dataInstance['facility_name']));
       });
     });
     //#endregion
   }
-
   processFilters() {
     this.DataFilterInstance.processDates();
 
@@ -73,6 +69,29 @@ export class OverviewComponent implements OnInit {
       this.CompositeCharts[chart_ident].reloadData();
     });
     //#endregion
+
+    this.loadCovid19SummaryData();
+  }
+
+  attachGroupedCategory(GCHaystack: any[], gc_name: string, gc_last: boolean) {
+    let gc_found = -1;
+
+    GCHaystack.forEach((GCInstance, index) => {
+      if (GCInstance.name == gc_name) {
+        gc_found = index;
+      }
+    });
+
+    if (gc_found == -1) {
+      if (gc_last) {
+        GCHaystack.push(gc_name);
+      } else {
+        GCHaystack.push(new GroupedCategory(gc_name, []));
+      }
+      gc_found = (GCHaystack.length - 1);
+    }
+
+    return gc_found;
   }
 
   loadCharts() {
@@ -589,7 +608,8 @@ export class OverviewComponent implements OnInit {
             min: 0,
             title: {
               text: 'Number Screened'
-            }
+            },
+            allowDecimals: false
           },
           tooltip: {
             valueSuffix: ''
@@ -597,12 +617,16 @@ export class OverviewComponent implements OnInit {
           plotOptions: {
             column: {
               pointPadding: 0.2,
-              borderWidth: 0
+              borderWidth: 0,
+              dataLabels: {
+                enabled: true
+              }
             }
           },
           series: [
             {
               color: "#234FEA",
+              name: "Number",
               data: MCTemp.ChartSeries[0],
               showInLegend: false
             }
@@ -626,6 +650,9 @@ export class OverviewComponent implements OnInit {
       },
       () => {
         let MCTemp = this.CompositeCharts['findPositivityByAgeGender'];
+
+        //Reset
+        MCTemp.ChartSeries = [];
 
         //#region Init series indexes
         // Age Group(Index --> 0)
@@ -655,7 +682,7 @@ export class OverviewComponent implements OnInit {
             MCTemp.ChartData.forEach((dataInstance) => {
               if (dataInstance.AgeGroup == ageGroupInstance) {
                 //Compile Female (Index --> 1)
-                if (dataInstance.Gender == 'Female') {
+                if (dataInstance.Sex == 'Female') {
                   MCTemp.ChartSeries[1].push(
                     dataInstance.PositiveNumber
                   );
@@ -663,7 +690,7 @@ export class OverviewComponent implements OnInit {
                 }
 
                 //Compile Male (Index --> 2)
-                else if (dataInstance.Gender == 'Male') {
+                else if (dataInstance.Sex == 'Male') {
                   MCTemp.ChartSeries[2].push(dataInstance.PositiveNumber);
                   male_found = true;
                 }
@@ -690,7 +717,7 @@ export class OverviewComponent implements OnInit {
             align: 'left',
           },
           chart: {
-            type: 'bar',
+            // type: 'bar',
           },
           accessibility: {
             point: {
@@ -699,26 +726,44 @@ export class OverviewComponent implements OnInit {
           },
           xAxis: [
             {
+              title: {
+                text: 'Age Group'
+              },
+              categories: MCTemp.ChartSeries[0]
+            }, {
+              title: {
+                text: 'Age Group'
+              },
               categories: MCTemp.ChartSeries[0],
-              title: { text: '' },
+              opposite: true,
             }
           ],
           yAxis: [
             {
               title: {
-                text: 'Number Positive',
+                text: 'Number tested COVID-19 positive',
+                align: 'high',
+                textAlign: 'center'
               },
-              labels: {
-                format: '{value}', //TODO! Format to remove netagive values
+              allowDecimals: false,
+              width: '50%',
+              reversed: true
+            }, {
+              title: {
+                text: '',
               },
+              allowDecimals: false,
+              width: '50%',
+              left: '50%',
+              offset: 0,
             }
           ],
           plotOptions: {
-            series: {
-              stacking: 'normal',
-            },
             bar: {
-              pointWidth: 18,
+              pointWidth: 35,
+              dataLabels: {
+                enabled: true
+              }
             }
           },
           tooltip: {
@@ -727,14 +772,20 @@ export class OverviewComponent implements OnInit {
           legend: { align: 'left', verticalAlign: 'top', y: 0, x: 80 },
           series: [
             {
-              name: 'Male',
-              data: MCTemp.ChartSeries[2],
-              color: '#234FEA',
-            },
-            {
               name: 'Female',
               data: MCTemp.ChartSeries[1],
               color: '#FFA500',
+              xAxis: 0,
+              yAxis: 0,
+              type: 'bar'
+            },
+            {
+              name: 'Male',
+              data: MCTemp.ChartSeries[2],
+              color: '#234FEA',
+              xAxis: 1,
+              yAxis: 1,
+              type: 'bar'
             }
           ],
           credits: {
@@ -757,11 +808,14 @@ export class OverviewComponent implements OnInit {
       () => {
         let MCTemp = this.CompositeCharts['findOverallPositivityByFacility'];
 
+        //Reset
+        MCTemp.ChartSeries = [];
+
         //#region Init series indexes
         // Facilities (Index --> 0)
         MCTemp.ChartSeries.push([]);
 
-        //Enrolled (Index --> 1)
+        //Tested (Index --> 1)
         MCTemp.ChartSeries.push([]);
 
         //Positive (Index --> 2)
@@ -773,11 +827,11 @@ export class OverviewComponent implements OnInit {
           //Compile Facilities (Index --> 0)
           MCTemp.ChartSeries[0].push(dataInstance.Facility);
 
-          //Compile Enrollments (Index --> 1)
-          MCTemp.ChartSeries[1].push(dataInstance.EnrolledNumber);
+          //Compile Tested (Index --> 1)
+          MCTemp.ChartSeries[1].push(dataInstance.TestedNumber);
 
           //Compile Positives (Index --> 2)
-          MCTemp.ChartSeries[2].push(dataInstance.Covid19Positive);
+          MCTemp.ChartSeries[2].push(dataInstance.PositiveNumber);
         });
         //#endregion
       },
@@ -786,7 +840,7 @@ export class OverviewComponent implements OnInit {
 
         MCTemp.ChartOptions = {
           title: {
-            text: 'Enrolled and Tested Positive by Facility',
+            text: 'Tested Positive by Facility',
             align: 'left'
           },
           chart: {
@@ -798,13 +852,13 @@ export class OverviewComponent implements OnInit {
           },
           yAxis: {
             title: {
-              text: "Number Enrolled",
+              text: "Number Tested",
             }
           },
           series: [
             {
               showInLegend: true,
-              name: "Enrolled",
+              name: "Tested",
               data: MCTemp.ChartSeries[1],
               type: 'column',
               color: "#234FEA",
@@ -850,7 +904,13 @@ export class OverviewComponent implements OnInit {
         MCTemp.LoadChartOptions();
       },
       () => {
+        // Prerequisites
         let MCTemp = this.CompositeCharts['findOverTime'];
+        let GCPeriod: GroupedCategory[] = [];
+        let GCInstance = new GroupedCategory("", []);
+
+        // Reset
+        MCTemp.ChartSeries = [];
 
         //#region Init series indexes
         //EpiWeek (Index --> 0)
@@ -866,11 +926,17 @@ export class OverviewComponent implements OnInit {
         //#region Push series data into array at specific indexes
         MCTemp.ChartData.forEach((dataInstance) => {
           MCTemp.ChartSeries[0].push(dataInstance.EpiWeek);
-          MCTemp.ChartSeries[1].push(dataInstance.SampleTested);
-          MCTemp.ChartSeries[2].push(dataInstance.CovidPositive);
+          MCTemp.ChartSeries[1].push(dataInstance.TestedNumber);
+          MCTemp.ChartSeries[2].push(dataInstance.PositiveNumber);
+
+          let gc_year_index = GCInstance.attach(GCPeriod, dataInstance.Year, false);
+          let gc_month_index = GCInstance.attach(GCPeriod[gc_year_index].categories, dataInstance.Month, false);
+          let gc_epiweek_index = GCInstance.attach(GCPeriod[gc_year_index].categories[gc_month_index].categories, dataInstance.EpiWeek, true);
         });
         //#endregion
 
+        // Period (index --> 3)
+        MCTemp.ChartSeries.push(JSON.parse(JSON.stringify(GCPeriod)));
       },
       () => {
         let MCTemp = this.CompositeCharts['findOverTime'];
@@ -880,15 +946,20 @@ export class OverviewComponent implements OnInit {
             text: 'COVID-19 Positivity over time',
             align: 'left',
           },
-          xAxis: [
-            {
-              title: {
-                text: '',
-              },
-              categories: MCTemp.ChartSeries[0],
-              crosshair: true
-            }
-          ],
+          xAxis: {
+            name: "Period",
+            title: { text: "Period (Year, Month, Epi Week)" },
+            tickWidth: 1,
+            labels: {
+              y: 18,
+              groupedOptions: [{
+                y: 10,
+              }, {
+                y: 10
+              }]
+            },
+            categories: MCTemp.ChartSeries[3]
+          },
           yAxis: [
             {
               labels: {
@@ -901,6 +972,9 @@ export class OverviewComponent implements OnInit {
             {
               title: {
                 text: 'Percent Positive'
+              },
+              labels: {
+                format: '{value}%',
               },
               opposite: true,
             }
@@ -918,17 +992,21 @@ export class OverviewComponent implements OnInit {
               type: 'spline',
               color: 'red',
               yAxis: 1,
-              accessibility: { point: { valueSuffix: '%' } },
               data: MCTemp.ChartSeries[2],
             },
           ],
           plotOptions: {
+            column: {
+              dataLabels: {
+                enabled: true
+              }
+            },
             spline: {
               stacking: 'normal',
               dataLabels: {
                 enabled: true,
                 useHTML: true,
-                format: "{y}%"
+                format: "<span style='text-shadow: 0px 0px 3px black; color: white; font-weight: bold'>{y}%</span>"
               }
             }
           },
@@ -939,12 +1017,11 @@ export class OverviewComponent implements OnInit {
       }
     );
     //#endregion
-
-    HC_exporting(Highcharts);
   }
 
-  //#region Load Chart --> Covid-19 Summary by last month
   loadCovid19SummaryData() {
+    this.covid19SummaryGroup = [];
+
     for (let index = 0; index < 5; index++) {
       //Init Group Instance
       this.covid19SummaryGroup.push([]);
@@ -959,7 +1036,7 @@ export class OverviewComponent implements OnInit {
       this.covid19SummaryGroup[index].push(0);
     }
 
-    this.reviewService.findSummaryByMonth().subscribe((response) => {
+    this.reviewService.findSummaryByMonth(this.DataFilterInstance).subscribe((response) => {
       this.covid19SummaryByMonth = response;
 
       //#region Attach Summary --> Last Month Data
@@ -1002,7 +1079,5 @@ export class OverviewComponent implements OnInit {
       //#endregion
     });
   }
-
-  //#endregion
 
 }

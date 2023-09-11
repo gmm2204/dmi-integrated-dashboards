@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
-import { SARIILIChart } from '../../../models/sari_ili/SARIILIChart.model';
-import { SCParent } from '../../../models/sari_ili/SCParent.model';
+import { Chart } from '../../../models/sari_ili/Chart.model';
+import { ChartParent } from '../../../models/sari_ili/ChartParent.model';
+import { IDFilter } from '../../../models/IDFilter.model';
+import { APIReader } from '../../../models/APIReader.model';
+import { IDFacility } from '../../../models/IDFacility.model';
+import { GroupedCategory } from '../../../models/GroupedCategory.model';
 
 import * as Highcharts from 'highcharts/highstock';
 import HC_exporting from 'highcharts/modules/exporting';
@@ -10,8 +14,6 @@ import HighchartsMap from "highcharts/modules/map"
 import HighchartsSolidGauge from 'highcharts/modules/solid-gauge';
 import HighchartsTreeMap from 'highcharts/modules/treemap';
 import HighchartsTreeGraph from 'highcharts/modules/treegraph';
-import topography from '../../../data/world.geojson.json'
-import topographyData from '../../../data/afi_pathogen_facility.json'
 
 HighchartsMore(Highcharts);
 HighchartsSolidGauge(Highcharts);
@@ -27,20 +29,50 @@ HighchartsTreeGraph(Highcharts);
 export class SARSCOV2Component implements OnInit {
   //#region Prerequisites
   highcharts = Highcharts;
-  CompositeCharts: SCParent = {};
+  CompositeCharts: ChartParent = {};
+
+  APIReaderInstance = new APIReader(this.http);
+  DataFilterInstance = new IDFilter();
+  CompositeFacilities: any[] = [];
   //#endregion
 
   constructor(private http: HttpClient) { }
 
   ngOnInit(): void {
-
+    this.loadFilters();
     this.loadCharts();
+  }
 
+  formatLabel(value: number): string {
+    return `${value}`;
+  }
+
+  loadFilters() {
+    //#region Acquire composite facilities
+    this.APIReaderInstance.loadData("sari_ili/acquireCompositeFacilities", () => {
+      this.APIReaderInstance.CompositeData.forEach((dataInstance: any) => {
+        this.CompositeFacilities.push(new IDFacility(
+          dataInstance['FacilityId'],
+          dataInstance['FacilityCode'],
+          dataInstance['FacilityName']));
+      });
+    });
+    //#endregion
+  }
+  processFilters() {
+    this.DataFilterInstance.processDates();
+
+    //#region Reload all charts
+    Object.keys(this.CompositeCharts).forEach(chart_ident => {
+      this.CompositeCharts[chart_ident].ChartFilterData = this.DataFilterInstance;
+      this.CompositeCharts[chart_ident].reloadData();
+    });
+    //#endregion
   }
 
   loadCharts() {
     //#region Load Chart --> ILI & SARI SARS-COV-2 Cascade
-    this.CompositeCharts['influenzaCascade'] = new SARIILIChart(this.http);
+    this.CompositeCharts['influenzaCascade'] = new Chart(this.http);
     this.CompositeCharts['influenzaCascade'].loadData(
       "sarscov/influenzaCascade",
       () => {
@@ -139,8 +171,8 @@ export class SARSCOV2Component implements OnInit {
     );
     //#endregion
 
-    //#region Load Chart --> Tested for SARS-COV-2 by Age Category (Tested for SARS-COV-2 by Age Group)
-    this.CompositeCharts['testedByAgeGroup'] = new SARIILIChart(this.http);
+    //#region Load Chart --> Tested for SARS-COV-2 by Age Group
+    this.CompositeCharts['testedByAgeGroup'] = new Chart(this.http);
     this.CompositeCharts['testedByAgeGroup'].loadData(
       "sarscov/testedByAgeGroup",
       () => {
@@ -149,21 +181,25 @@ export class SARSCOV2Component implements OnInit {
         MCTemp.LoadChartOptions();
       },
       () => {
+        // Prerequisites
         let MCTemp = this.CompositeCharts['testedByAgeGroup'];
+        MCTemp.ChartSeries = [];
 
-        // Age Group (Index --> 0)
-        MCTemp.ChartSeries.push([]);
+        // Reset
+        MCTemp.ChartSeries = [];
 
-        // SARS-COV-2 Tested Number (Index --> 1)
-        MCTemp.ChartSeries.push([]);
-
-        // SARS-COV-2 Tested Percentage (Index --> 2)
+        // Series
         MCTemp.ChartSeries.push([]);
 
         MCTemp.ChartData.forEach((dataInstance) => {
-          MCTemp.ChartSeries[0].push(dataInstance.AgeCategory);
-          MCTemp.ChartSeries[1].push(dataInstance.SARSCOV2TestedNumber);
-          MCTemp.ChartSeries[2].push(dataInstance.SARSCOV2TestedPercentage);
+          if (dataInstance.AgeGroupCategory != null) {
+            MCTemp.ChartSeries[0].push(
+              [
+                dataInstance.AgeGroupCategory + ", " + dataInstance.SARSCOV2TestedNumber + " (" + dataInstance.SARSCOV2TestedPercent + "%)",
+                dataInstance.SARSCOV2TestedNumber
+              ]
+            );
+          }
         });
       },
       () => {
@@ -171,11 +207,16 @@ export class SARSCOV2Component implements OnInit {
 
         MCTemp.ChartOptions = {
           title: {
-            text: 'Tested for SARS-COV-2 by Age Category',
+            text: 'Figure 16: Tested for SARS-COV-2 by Age Group',
             align: 'left',
           },
           chart: {
-            type: 'bar',
+            type: 'pie',
+          },
+          accessibility: {
+            point: {
+              valueDescriptionFormat: '{index}. Age {xDescription}, {value}%.',
+            },
           },
           xAxis: [
             {
@@ -187,6 +228,13 @@ export class SARSCOV2Component implements OnInit {
             {
               title: {
                 text: 'Number Enrolled',
+              },
+              labels: {
+                format: '{value}',
+              },
+              accessibility: {
+                description: 'Number',
+                rangeDescription: 'Range: 0 to 5%',
               }
             },
             {
@@ -194,36 +242,31 @@ export class SARSCOV2Component implements OnInit {
                 text: 'Percentage Enrolled',
               },
               labels: {
-                format: '{value}%', //TODO! Format to remove netagive values
+                format: '{value}%',
               },
               opposite: true
             }
           ],
           plotOptions: {
-            series: {
-              stacking: 'normal',
+            pie: {
+              innerSize: "70%",
+              depth: 25,
+              dataLabels: {
+                enabled: true
+              },
             },
-            bar: {
-              pointWidth: 18,
-            }
           },
+          legend: { align: 'left', verticalAlign: 'bottom', y: 0, x: 80 },
           tooltip: {
             format:
               '<b>{series.name}, {point.category}, {y}</b>'
           },
-          legend: { align: 'left', verticalAlign: 'top', y: 0, x: 80 },
           series: [
             {
-              name: 'Enrolled Number',
-              data: MCTemp.ChartSeries[1],
-              color: '#234FEA',
-            },
-            {
-              name: 'Enrolled Percentage',
-              data: MCTemp.ChartSeries[2],
-              color: '#FFA500',
-              type: "spline",
-              yAxis: 1
+              name: "Data",
+              type: 'pie',
+              showInLegend: true,
+              data: MCTemp.ChartSeries[0]
             }
           ],
           credits: {
@@ -235,7 +278,7 @@ export class SARSCOV2Component implements OnInit {
     //#endregion
 
     //#region Load Chart --> SARS-COV-2 Positive Distribution by Age Category
-    this.CompositeCharts['positiveDistributionByAgeGroup'] = new SARIILIChart(this.http);
+    this.CompositeCharts['positiveDistributionByAgeGroup'] = new Chart(this.http);
     this.CompositeCharts['positiveDistributionByAgeGroup'].loadData(
       "sarscov/positiveDistributionByAgeGroup",
       () => {
@@ -244,21 +287,25 @@ export class SARSCOV2Component implements OnInit {
         MCTemp.LoadChartOptions();
       },
       () => {
+        // Prerequisites
         let MCTemp = this.CompositeCharts['positiveDistributionByAgeGroup'];
+        MCTemp.ChartSeries = [];
 
-        // Age Group (Index --> 0)
-        MCTemp.ChartSeries.push([]);
+        // Reset
+        MCTemp.ChartSeries = [];
 
-        // SARS-COV-2 Positive Number (Index --> 1)
-        MCTemp.ChartSeries.push([]);
-
-        // SARS-COV-2 Positive Percentage (Index --> 2)
+        // Series
         MCTemp.ChartSeries.push([]);
 
         MCTemp.ChartData.forEach((dataInstance) => {
-          MCTemp.ChartSeries[0].push(dataInstance.AgeCategory);
-          MCTemp.ChartSeries[1].push(dataInstance.SARSCOV2PositiveNumber);
-          MCTemp.ChartSeries[2].push(dataInstance.SARSCOV2PositivePercentage);
+          if (dataInstance.AgeGroupCategory != null) {
+            MCTemp.ChartSeries[0].push(
+              [
+                dataInstance.AgeGroupCategory + ", " + dataInstance.SARSCOV2PositiveNumber + " (" + dataInstance.SARSCOV2PositivePercent + "%)",
+                dataInstance.SARSCOV2PositiveNumber
+              ]
+            );
+          }
         });
       },
       () => {
@@ -266,11 +313,16 @@ export class SARSCOV2Component implements OnInit {
 
         MCTemp.ChartOptions = {
           title: {
-            text: 'SARS-COV-2 Positive Distribution by Age Category',
+            text: 'Figure 17: SARS-CoV-2 Positive Distribution by Age Category',
             align: 'left',
           },
           chart: {
-            type: 'bar',
+            type: 'pie',
+          },
+          accessibility: {
+            point: {
+              valueDescriptionFormat: '{index}. Age {xDescription}, {value}%.',
+            },
           },
           xAxis: [
             {
@@ -281,44 +333,46 @@ export class SARSCOV2Component implements OnInit {
           yAxis: [
             {
               title: {
-                text: 'Number Positive',
+                text: 'Number Enrolled',
+              },
+              labels: {
+                format: '{value}',
+              },
+              accessibility: {
+                description: 'Number',
+                rangeDescription: 'Range: 0 to 5%',
               }
             },
             {
               title: {
-                text: 'Percentage Positive',
+                text: 'Percentage Enrolled',
               },
               labels: {
-                format: '{value}%', //TODO! Format to remove netagive values
+                format: '{value}%',
               },
               opposite: true
             }
           ],
           plotOptions: {
-            series: {
-              stacking: 'normal',
+            pie: {
+              innerSize: "70%",
+              depth: 25,
+              dataLabels: {
+                enabled: true
+              },
             },
-            bar: {
-              pointWidth: 18,
-            }
           },
+          legend: { align: 'left', verticalAlign: 'bottom', y: 0, x: 80 },
           tooltip: {
             format:
               '<b>{series.name}, {point.category}, {y}</b>'
           },
-          legend: { align: 'left', verticalAlign: 'top', y: 0, x: 80 },
           series: [
             {
-              name: 'Positive Number',
-              data: MCTemp.ChartSeries[1],
-              color: '#234FEA',
-            },
-            {
-              name: 'Positive Percentage',
-              data: MCTemp.ChartSeries[2],
-              color: '#FFA500',
-              type: "spline",
-              yAxis: 1,
+              name: "Data",
+              type: 'pie',
+              showInLegend: true,
+              data: MCTemp.ChartSeries[0]
             }
           ],
           credits: {
@@ -329,16 +383,22 @@ export class SARSCOV2Component implements OnInit {
     );
     //#endregion
 
-    //#region Load Chart --> Number of Speciment Tested and % Positive for SARS-COV-2 over time
-    this.CompositeCharts['SARSCOV2PositiveOvertime'] = new SARIILIChart(this.http);
-    this.CompositeCharts['SARSCOV2PositiveOvertime'].loadData(
+    //#region Load Chart --> Number of Speciment Tested and % Positive for SARS-COV-2 by Epi Week
+    this.CompositeCharts['SARSCOV2PositiveByEpiWeek'] = new Chart(this.http);
+    this.CompositeCharts['SARSCOV2PositiveByEpiWeek'].loadData(
       "sarscov/SARSCOV2PositiveOvertime",
       () => {
-        let MCTemp = this.CompositeCharts['SARSCOV2PositiveOvertime'];
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByEpiWeek'];
         MCTemp.LoadChartOptions();
       },
       () => {
-        let MCTemp = this.CompositeCharts['SARSCOV2PositiveOvertime'];
+        // Prerequisites
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByEpiWeek'];
+        let GCPeriod: GroupedCategory[] = [];
+        let GCInstance = new GroupedCategory("", []);
+
+        // Reset
+        MCTemp.ChartSeries = [];
 
         // Initialize series array
         for (let index = 0; index < 4; index++) {
@@ -350,31 +410,49 @@ export class SARSCOV2Component implements OnInit {
           MCTemp.ChartSeries[0].push(dataInstance.EpiWeek);
 
           //Compile Covid Tested Number (Index --> 1)
-          MCTemp.ChartSeries[1].push(dataInstance.CovidTestedNumber);
+          MCTemp.ChartSeries[1].push(dataInstance.SARSCOV2TestedNumber);
 
           //Compile SARS-COV-2 Positive Percentage (Index --> 2)
-          MCTemp.ChartSeries[2].push(dataInstance.SARSCOV2PositivePercentage);
+          MCTemp.ChartSeries[2].push(dataInstance.SARSCOV2PositivePercent);
+
+          //Compile period
+          let gc_year_index = GCInstance.attach(GCPeriod, dataInstance.Year, false);
+          let gc_month_index = GCInstance.attach(GCPeriod[gc_year_index].categories, dataInstance.Month, false);
+          let gc_epiweek_index = GCInstance.attach(GCPeriod[gc_year_index].categories[gc_month_index].categories, dataInstance.EpiWeek, true);
         });
+
+        // Period (index --> 3)
+        MCTemp.ChartSeries[3] = JSON.parse(JSON.stringify(GCPeriod));
       },
       () => {
-        let MCTemp = this.CompositeCharts['SARSCOV2PositiveOvertime'];
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByEpiWeek'];
 
         MCTemp.ChartOptions = {
           title: {
-            text: 'Number of Speciment Tested and % Positive for SARS-COV-2 over time',
+            text: 'Figure 18: Number of Speciment Tested and % Positive for SARS-COV-2 by Epi Week',
             align: 'left'
           },
           chart: {
             type: "column",
           },
           xAxis: {
-            categories: MCTemp.ChartSeries[0],
-            title: false,
+            name: "Period",
+            title: { text: "Period (Year, Month, Epi Week)" },
+            tickWidth: 1,
             min: 0,
             max: 22,
             scrollbar: {
               enabled: true
-            }
+            },
+            labels: {
+              y: 18,
+              groupedOptions: [{
+                y: 10,
+              }, {
+                y: 10
+              }]
+            },
+            categories: MCTemp.ChartSeries[3]
           },
           yAxis: [{
             title: {
@@ -385,6 +463,9 @@ export class SARSCOV2Component implements OnInit {
             title: {
               text: "(%) SARS-COV-2 Positive",
               rotation: 270,
+            },
+            labels: {
+              format: '{value}%',
             },
             opposite: true
           }],
@@ -422,7 +503,125 @@ export class SARSCOV2Component implements OnInit {
     );
     //#endregion
 
-    HC_exporting(Highcharts);
+    //#region Load Chart --> Number of Speciment Tested and % Positive for SARS-COV-2 by Year
+    this.CompositeCharts['SARSCOV2PositiveByYear'] = new Chart(this.http);
+    this.CompositeCharts['SARSCOV2PositiveByYear'].loadData(
+      "sarscov/SARSCOV2PositiveOvertime",
+      () => {
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByYear'];
+        MCTemp.LoadChartOptions();
+      },
+      () => {
+        // Prerequisites
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByYear'];
+        let GCPeriod: GroupedCategory[] = [];
+        let GCInstance = new GroupedCategory("", []);
 
+        // Reset
+        MCTemp.ChartSeries = [];
+
+        // Initialize series array
+        for (let index = 0; index < 4; index++) {
+          MCTemp.ChartSeries.push([]);
+        }
+
+        MCTemp.ChartData.forEach(dataInstance => {
+          //Compile Epi Week (Index --> 0)
+          MCTemp.ChartSeries[0].push(dataInstance.EpiWeek);
+
+          //Compile Covid Tested Number (Index --> 1)
+          MCTemp.ChartSeries[1].push(dataInstance.SARSCOV2TestedNumber);
+
+          //Compile SARS-COV-2 Positive Percentage (Index --> 2)
+          MCTemp.ChartSeries[2].push(dataInstance.SARSCOV2PositivePercent);
+
+          //Compile period
+          let gc_year_index = GCInstance.attach(GCPeriod, dataInstance.Year, false);
+          let gc_month_index = GCInstance.attach(GCPeriod[gc_year_index].categories, dataInstance.Month, false);
+          let gc_epiweek_index = GCInstance.attach(GCPeriod[gc_year_index].categories[gc_month_index].categories, dataInstance.EpiWeek, true);
+        });
+
+        // Period (index --> 3)
+        MCTemp.ChartSeries[3] = JSON.parse(JSON.stringify(GCPeriod));
+      },
+      () => {
+        let MCTemp = this.CompositeCharts['SARSCOV2PositiveByYear'];
+
+        MCTemp.ChartOptions = {
+          title: {
+            text: 'Figure 19: Number of Speciment Tested and % Positive for SARS-COV-2 by Year',
+            align: 'left'
+          },
+          chart: {
+            type: "column",
+          },
+          xAxis: {
+            name: "Period",
+            title: { text: "Period (Year, Month, Epi Week)" },
+            tickWidth: 1,
+            min: 0,
+            max: 22,
+            scrollbar: {
+              enabled: true
+            },
+            labels: {
+              y: 18,
+              groupedOptions: [{
+                y: 10,
+              }, {
+                y: 10
+              }]
+            },
+            categories: MCTemp.ChartSeries[3]
+          },
+          yAxis: [{
+            title: {
+              text: "Number tested for Covid",
+            }
+          },
+          {
+            title: {
+              text: "(%) SARS-COV-2 Positive",
+              rotation: 270,
+            },
+            labels: {
+              format: '{value}%',
+            },
+            opposite: true
+          }],
+          series: [
+            {
+              showInLegend: true,
+              name: "Tested for Covid",
+              data: MCTemp.ChartSeries[1],
+              type: 'column',
+              color: "#234FEA"
+            },
+            {
+              showInLegend: true,
+              name: "Percentage SARS-COV-2 Positive",
+              data: MCTemp.ChartSeries[2],
+              type: 'spline',
+              yAxis: 1,
+              color: "#FF0000"
+            }
+          ],
+          plotOptions: {
+            column: {
+              stacking: 'normal',
+              dataLabels: {
+                enabled: true
+              }
+            }
+          },
+          useHighStocks: true,
+          credits: {
+            enabled: false,
+          }
+        }
+      }
+    );
+    //#endregion
   }
+
 }

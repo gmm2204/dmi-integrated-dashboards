@@ -6,6 +6,7 @@ import { ChartParent } from '../../../models/mortality_ncov/ChartParent.model';
 import { APIReader } from 'src/app/models/APIReader.model';
 import { IDFilter } from 'src/app/models/IDFilter.model';
 import { IDFacility } from 'src/app/models/IDFacility.model';
+import { GroupedCategory } from '../../../models/GroupedCategory.model';
 
 import * as Highcharts from 'highcharts';
 import HC_exporting from 'highcharts/modules/exporting';
@@ -37,10 +38,13 @@ export class EnrolmentComponent implements OnInit {
   }
 
   loadFilters() {
-    //#region Acqurie composite facilities
+    //#region Acquire composite facilities
     this.APIReaderInstance.loadData("mortality_ncov/acquireCompositeFacilities", () => {
       this.APIReaderInstance.CompositeData.forEach((dataInstance: any) => {
-        this.CompositeFacilities.push(new IDFacility(dataInstance));
+        this.CompositeFacilities.push(new IDFacility(
+          dataInstance['facility_id'],
+          dataInstance['facility_code'],
+          dataInstance['facility_name']));
       });
     });
     //#endregion
@@ -69,6 +73,9 @@ export class EnrolmentComponent implements OnInit {
       },
       () => {
         let MCTemp = this.CompositeCharts['findByGender'];
+
+        //Reset
+        MCTemp.ChartSeries = [];
 
         //#region Push series data into array at specific indexes
         //Male Series (Index --> 0)
@@ -114,7 +121,10 @@ export class EnrolmentComponent implements OnInit {
           plotOptions: {
             column: {
               pointPadding: 0.2,
-              borderWidth: 0
+              borderWidth: 0,
+              dataLabels: {
+                enabled: true
+              }
             }
           },
           series: [
@@ -149,6 +159,9 @@ export class EnrolmentComponent implements OnInit {
       () => {
         let MCTemp = this.CompositeCharts['findByAgeGender'];
 
+        //Reset
+        MCTemp.ChartSeries = [];
+
         //#region Init series indexes
         // Age Group(Index --> 0)
         MCTemp.ChartSeries.push([]);
@@ -158,6 +171,7 @@ export class EnrolmentComponent implements OnInit {
         MCTemp.ChartSeries[0].push("35-64 Yrs");
         MCTemp.ChartSeries[0].push("65-84 Yrs");
         MCTemp.ChartSeries[0].push("85+ Yrs");
+        MCTemp.ChartSeries[0].reverse();
 
         //Positivity - Female (Index --> 1)
         MCTemp.ChartSeries.push([]);
@@ -210,32 +224,64 @@ export class EnrolmentComponent implements OnInit {
           chart: { type: "bar" },
           xAxis: [
             {
+              title: {
+                text: ''
+              },
+              categories: MCTemp.ChartSeries[0]
+            }, {
+              title: {
+                text: ''
+              },
               categories: MCTemp.ChartSeries[0],
-              title: { text: "" }
+              opposite: true,
             }
           ],
           yAxis: [
             {
               title: {
-                text: "Number Enrolled"
-              }
+                text: 'Enrolled Number',
+                align: 'high',
+                textAlign: 'center'
+              },
+              allowDecimals: false,
+              width: '50%',
+              reversed: true
+            }, {
+              title: {
+                text: '',
+              },
+              allowDecimals: false,
+              width: '50%',
+              left: '50%',
+              offset: 0,
             }
           ],
-          plotOptions: { series: { stacking: "normal" }, bar: { pointWidth: 18 } },
+          plotOptions: {
+            bar: {
+              pointWidth: 40,
+              dataLabels: {
+                enabled: true
+              }
+            }
+          },
           tooltip: {
           },
           legend: { align: "left", verticalAlign: "top", y: 0, x: 80 },
           series: [
             {
-              name: "Male",
-              data: MCTemp.ChartSeries[2],
-              color: "#234FEA",
+              name: 'Female',
+              data: MCTemp.ChartSeries[1],
+              color: '#FFA500',
+              xAxis: 0,
+              yAxis: 0,
               type: 'bar'
             },
             {
-              name: "Female",
-              data: MCTemp.ChartSeries[1],
-              color: "#FFA500",
+              name: 'Male',
+              data: MCTemp.ChartSeries[2],
+              color: '#234FEA',
+              xAxis: 1,
+              yAxis: 1,
               type: 'bar'
             }
           ],
@@ -259,6 +305,9 @@ export class EnrolmentComponent implements OnInit {
       () => {
         let MCTemp = this.CompositeCharts['findByFacility'];
 
+        //Reset
+        MCTemp.ChartSeries = [];
+
         //#region Init series indexes
         // Facilities (Index --> 0)
         MCTemp.ChartSeries.push([]);
@@ -279,7 +328,7 @@ export class EnrolmentComponent implements OnInit {
           MCTemp.ChartSeries[1].push(dataInstance.EnrolledNumber);
 
           //Compile Positives (Index --> 2)
-          MCTemp.ChartSeries[2].push(dataInstance.Covid19Positive);
+          MCTemp.ChartSeries[2].push(dataInstance.PositiveNumber);
         });
         //#endregion
       },
@@ -346,15 +395,20 @@ export class EnrolmentComponent implements OnInit {
       },
       () => {
         let MCTemp = this.CompositeCharts['findOverTime'];
+        let GCPeriod: GroupedCategory[] = [];
+        let GCInstance = new GroupedCategory("", []);
+
+        //Reset
+        MCTemp.ChartSeries = [];
 
         //#region Init series indexes
         // EpiWeek (Index --> 0)
         MCTemp.ChartSeries.push([]);
 
-        //Elligible (Index --> 1)
+        //Enrolled (Index --> 1)
         MCTemp.ChartSeries.push([]);
 
-        //Enrolled (Index --> 2)
+        //Tested (Index --> 2)
         MCTemp.ChartSeries.push([]);
         //#endregion
 
@@ -363,13 +417,21 @@ export class EnrolmentComponent implements OnInit {
           //Compile EpiWeek
           MCTemp.ChartSeries[0].push(dataInstance.EpiWeek);
 
-          //Compile Elligible
-          MCTemp.ChartSeries[1].push(dataInstance.ElligibleNumber);
-
           //Compile Enrolled
-          MCTemp.ChartSeries[2].push(dataInstance.EnrolledNumber);
+          MCTemp.ChartSeries[1].push(dataInstance.EnrolledNumber);
+
+          //Compile Tested
+          MCTemp.ChartSeries[2].push(dataInstance.TestedNumber);
+
+          //Compile Period
+          let gc_year_index = GCInstance.attach(GCPeriod, dataInstance.Year, false);
+          let gc_month_index = GCInstance.attach(GCPeriod[gc_year_index].categories, dataInstance.Month, false);
+          let gc_epiweek_index = GCInstance.attach(GCPeriod[gc_year_index].categories[gc_month_index].categories, dataInstance.EpiWeek, true);
         });
         //#endregion
+
+        //Period (Index --> 3)
+        MCTemp.ChartSeries.push(JSON.parse(JSON.stringify(GCPeriod)));
       },
       () => {
         let MCTemp = this.CompositeCharts['findOverTime'];
@@ -380,31 +442,42 @@ export class EnrolmentComponent implements OnInit {
             align: 'left'
           },
           xAxis: {
-            categories: MCTemp.ChartSeries[0],
-            title: {
-              text: "Epiweek",
-            }
+            title: { text: "Period (Year, Month, Epi Week)" },
+            tickWidth: 1,
+            labels: {
+              y: 18,
+              groupedOptions: [{
+                y: 10,
+              }, {
+                y: 10
+              }]
+            },
+            categories: MCTemp.ChartSeries[3]
           },
           yAxis: [{
             title: {
-              text: "Number Eligible",
-            }
+              text: "Number Enrolled",
+            },
+            allowDecimals: false
           },
           {
             title: {
-              text: 'Percent Enrolled',
+              text: 'Percent Tested',
             },
             opposite: true,
+            labels: {
+              format: '{value}%',
+            },
           }],
           series: [
             {
-              name: "Elligible",
+              name: "Enrolled",
               data: MCTemp.ChartSeries[1],
               color: "#234FEA",
               type: "column"
             },
             {
-              name: "Enrolled",
+              name: "Tested",
               data: MCTemp.ChartSeries[2],
               color: "red",
               yAxis: 1,
